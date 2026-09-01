@@ -7,13 +7,13 @@ public class SimuladorFila {
     private static int ATENDIMENTO_MINIMO = 3;
     private static int ATENDIMENTO_MAXIMO = 5;
 
-    private static long a = 2493;
-    private static long c = 1098;
-    private static long M = 23123128321345L;
+    private static long a = 31109;
+    private static long c = 14321;
+    private static long M = 2147483648L;
     private static long previous = 22;
 
     private static int K = 5;
-    private static int servidores = 2;
+    private static int servidores = 1;
 
     private static PriorityQueue<Evento> eventos = new PriorityQueue<>();
     private static double[] tempos = new double[K + 1];
