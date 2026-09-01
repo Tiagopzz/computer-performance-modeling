@@ -13,7 +13,7 @@ public class SimuladorFila {
     private static long previous = 22;
 
     private static int K = 5;
-    private static int servidores = 1;
+    private static int servidores = 2;
 
     private static PriorityQueue<Evento> eventos = new PriorityQueue<>();
     private static double[] tempos = new double[K + 1];
@@ -81,7 +81,7 @@ public class SimuladorFila {
     }
 
     public static void main(String[] args) {
-        eventos.add(new Evento(2, TipoEvento.CHEGADA));
+        eventos.add(new Evento(3, TipoEvento.CHEGADA));
 
         while (count > 0) {
             Evento evento = NextEvent();
