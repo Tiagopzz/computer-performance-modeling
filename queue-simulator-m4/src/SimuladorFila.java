@@ -2,9 +2,9 @@ import java.util.PriorityQueue;
 
 public class SimuladorFila {
 
-    private static int CHEGADA_MINIMA = 2;
+    private static int CHEGADA_MINIMA = 3;
     private static int CHEGADA_MAXIMA = 5;
-    private static int ATENDIMENTO_MINIMO = 3;
+    private static int ATENDIMENTO_MINIMO = 4;
     private static int ATENDIMENTO_MAXIMO = 5;
 
     private static long a = 31109;
@@ -73,7 +73,7 @@ public class SimuladorFila {
 
     private static void imprimirResultados() {
         for (int i = 0; i < K + 1; i++) {
-            System.out.println(i + ": " + tempos[i] + " (" + tempos[i] / TempoGlobal + "%)");
+            System.out.println(i + ": " + tempos[i] + " (" + ((tempos[i] / TempoGlobal) * 100) + "%)");
         }
 
         System.out.println("Clientes perdidos: " + perdas);
