@@ -1,10 +1,14 @@
+package model;
+
 public class Evento implements Comparable<Evento> {
     private double tempo;
     private TipoEvento tipo;
+    private int indiceFila;
 
-    public Evento(double tempo, TipoEvento tipo) {
+    public Evento(double tempo, TipoEvento tipo, int indiceFila) {
         this.tempo = tempo;
         this.tipo = tipo;
+        this.indiceFila = indiceFila;
     }
 
     @Override
@@ -20,11 +24,19 @@ public class Evento implements Comparable<Evento> {
         return tipo;
     }
 
+    public int getIndiceFila() {
+        return indiceFila;
+    }
+
     public void setTempo(double tempo) {
         this.tempo = tempo;
     }
 
     public void setTipo(TipoEvento tipo) {
         this.tipo = tipo;
+    }
+
+    public void setIndiceFila(int indiceFila) {
+        this.indiceFila = indiceFila;
     }
 }
