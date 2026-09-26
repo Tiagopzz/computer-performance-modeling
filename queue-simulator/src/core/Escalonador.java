@@ -24,8 +24,8 @@ public class Escalonador {
         return !eventos.isEmpty();
     }
 
-    public void agendarPrimeiroEvento(double tempo) {
-        eventos.add(new Evento(tempo, TipoEvento.CHEGADA, 0));
+    public void agendarPrimeiroEvento(double tempo, int indiceDestino) {
+        eventos.add(new Evento(tempo, TipoEvento.CHEGADA, -1, indiceDestino));
     }
 
     public void agendarChegada(Fila fila, double tempoGlobal, int indiceFila) {
@@ -36,17 +36,17 @@ public class Escalonador {
         }
 
         double valorGerado = gerador.gerarNoIntervalo(intervalo);
-        eventos.add(new Evento(tempoGlobal + valorGerado, TipoEvento.CHEGADA, indiceFila));
+        eventos.add(new Evento(tempoGlobal + valorGerado, TipoEvento.CHEGADA, -1, indiceFila));
     }
 
-    public void agendarPassagem(Fila fila, double tempoGlobal, int indiceFila) {
+    public void agendarPassagem(Fila fila, double tempoGlobal, int indiceOrigem, int indiceDestino) {
         if (!gerador.temAleatoriosDisponiveis()) {
             return;
         }
 
         Intervalo intervalo = fila.getIntervaloAtendimento();
         double valorGerado = gerador.gerarNoIntervalo(intervalo);
-        eventos.add(new Evento(tempoGlobal + valorGerado, TipoEvento.PASSAGEM, indiceFila));
+        eventos.add(new Evento(tempoGlobal + valorGerado, TipoEvento.PASSAGEM, indiceOrigem, indiceDestino));
     }
 
     public void agendarSaida(Fila fila, double tempoGlobal, int indiceFila) {
@@ -56,6 +56,6 @@ public class Escalonador {
 
         Intervalo intervalo = fila.getIntervaloAtendimento();
         double valorGerado = gerador.gerarNoIntervalo(intervalo);
-        eventos.add(new Evento(tempoGlobal + valorGerado, TipoEvento.SAIDA, indiceFila));
+        eventos.add(new Evento(tempoGlobal + valorGerado, TipoEvento.SAIDA, indiceFila, -1));
     }
 }

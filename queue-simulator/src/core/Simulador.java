@@ -4,6 +4,7 @@ import java.util.List;
 
 import model.Evento;
 import model.TipoEvento;
+import model.Rota;
 import util.GeradorNumerosAleatorios;
 
 public class Simulador {
@@ -24,12 +25,12 @@ public class Simulador {
     }
 
     public void CHEGADA(Evento evento) {
-        int indiceFila = evento.getIndiceFila();
+        int indiceFila = evento.getIndiceDestino();
         Fila fila = filas.get(indiceFila);
 
         avancarTempo(evento);
 
-        if (fila.getStatus() < fila.getCapacidade()) {
+        if (fila.temEspaco()) {
             fila.entrada();
 
             if (fila.getStatus() <= fila.getServidores()) {
@@ -43,13 +44,13 @@ public class Simulador {
     }
 
     public void PASSAGEM(Evento evento) {
-        int indiceFila = evento.getIndiceFila();
+        int indiceFila = evento.getIndiceOrigem();
         Fila fila = filas.get(indiceFila);
 
         avancarTempo(evento);
 
         fila.saida();
-        int indiceProximaFila = indiceFila + 1;
+        int indiceProximaFila = evento.getIndiceDestino();
 
         if (fila.getStatus() >= fila.getServidores()) {
             agendarTerminoAtendimento(fila, indiceFila);
@@ -57,7 +58,7 @@ public class Simulador {
 
         Fila proximaFila = filas.get(indiceProximaFila);
 
-        if (proximaFila.getStatus() < proximaFila.getCapacidade()) {
+        if (proximaFila.temEspaco()) {
             proximaFila.entrada();
 
             if (proximaFila.getStatus() <= proximaFila.getServidores()) {
@@ -69,15 +70,43 @@ public class Simulador {
     }
 
     private void agendarTerminoAtendimento(Fila fila, int indiceFila) {
-        if (indiceFila == filas.size() - 1) {
+        if (!gerador.temAleatoriosDisponiveis()) {
+            return;
+        }
+
+        List<Rota> rotas = fila.getRotas();
+        int indiceDestino = rotas.get(0).getIndiceDestino();
+
+        if (rotas.size() > 1) {
+            double aleatorio = gerador.proximo();
+            double acumulada = 0.0;
+            indiceDestino = -2;
+            for (Rota rota : rotas) {
+                acumulada += rota.getProbabilidade();
+                if (aleatorio < acumulada) {
+                    indiceDestino = rota.getIndiceDestino();
+                    break;
+                }
+            }
+            if (indiceDestino == -2) {
+                throw new IllegalStateException("Nenhuma rota corresponde ao número sorteado");
+            }
+        }
+
+        // A escolha da rota pode consumir o último aleatório disponível.
+        if (!gerador.temAleatoriosDisponiveis()) {
+            return;
+        }
+
+        if (indiceDestino == -1) {
             escalonador.agendarSaida(fila, tempoGlobal, indiceFila);
         } else {
-            escalonador.agendarPassagem(fila, tempoGlobal, indiceFila);
+            escalonador.agendarPassagem(fila, tempoGlobal, indiceFila, indiceDestino);
         }
     }
 
     public void SAIDA(Evento evento) {
-        int indiceFila = evento.getIndiceFila();
+        int indiceFila = evento.getIndiceOrigem();
         Fila fila = filas.get(indiceFila);
 
         avancarTempo(evento);
@@ -85,13 +114,11 @@ public class Simulador {
         fila.saida();
 
         if (fila.getStatus() >= fila.getServidores()) {
-            escalonador.agendarSaida(fila, tempoGlobal, indiceFila);
+            agendarTerminoAtendimento(fila, indiceFila);
         }
     }
 
-    public void simular(double tempoPrimeiroEvento) {
-        escalonador.agendarPrimeiroEvento(tempoPrimeiroEvento);
-
+    public void simular() {
         while (gerador.temAleatoriosDisponiveis() && escalonador.temEventos()) {
             Evento evento = escalonador.proximoEvento();
 
@@ -113,7 +140,7 @@ public class Simulador {
 
             System.out.println("Fila " + (indiceFila + 1));
 
-            for (int estado = 0; estado <= fila.getCapacidade(); estado++) {
+            for (int estado = 0; estado <= fila.getMaiorEstado(); estado++) {
                 double tempoAcumulado = fila.getTempoAcumulado(estado);
                 double percentual = (tempoAcumulado / tempoGlobal) * 100;
 
