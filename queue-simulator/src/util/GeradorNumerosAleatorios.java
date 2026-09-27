@@ -20,7 +20,7 @@ public class GeradorNumerosAleatorios {
 
     public GeradorNumerosAleatorios(int quantidadeMaxima, long semente) {
         if (quantidadeMaxima < 0) {
-            throw new IllegalArgumentException("A quantidade de aleatórios não pode ser negativa.");
+            throw new IllegalArgumentException("A quantidade de aleatórios não pode ser negativa");
         }
         this.quantidadeMaxima = quantidadeMaxima;
         this.quantidadeUtilizada = 0;
@@ -31,7 +31,7 @@ public class GeradorNumerosAleatorios {
     public GeradorNumerosAleatorios(List<Double> numeros) {
         for (double numero : numeros) {
             if (!Double.isFinite(numero) || numero < 0 || numero >= 1) {
-                throw new IllegalArgumentException("rndnumbers deve conter valores em [0, 1).");
+                throw new IllegalArgumentException("rndnumbers deve conter valores em [0, 1)");
             }
         }
         this.numeros = List.copyOf(numeros);

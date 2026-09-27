@@ -93,7 +93,6 @@ public class Simulador {
             }
         }
 
-        // A escolha da rota pode consumir o último aleatório disponível.
         if (!gerador.temAleatoriosDisponiveis()) {
             return;
         }

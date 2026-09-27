@@ -16,13 +16,11 @@ public class Fila {
     Intervalo intervaloChegada;
     Intervalo intervaloAtendimento;
 
-    public Fila(int servidores, int capacidade, Intervalo intervaloChegada, Intervalo intervaloAtendimento,
-            List<Rota> rotas) {
+    public Fila(int servidores, int capacidade, Intervalo intervaloChegada, Intervalo intervaloAtendimento,  List<Rota> rotas) {
         double soma = 0.0;
         for (Rota rota : rotas) {
             double probabilidade = rota.getProbabilidade();
-            if (!Double.isFinite(probabilidade) || probabilidade < 0 || probabilidade > 1
-                    || rota.getIndiceDestino() < -1) {
+            if (!Double.isFinite(probabilidade) || probabilidade < 0 || probabilidade > 1 || rota.getIndiceDestino() < -1) {
                 throw new IllegalArgumentException("Rota inválida");
             }
             soma += probabilidade;

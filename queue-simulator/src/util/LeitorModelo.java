@@ -26,94 +26,97 @@ public class LeitorModelo {
     private final GeradorNumerosAleatorios gerador;
 
     public LeitorModelo(String caminho) throws IOException {
-        LoaderOptions opcoes = new LoaderOptions();
-        opcoes.setAllowDuplicateKeys(false);
-        SafeConstructor construtor = new SafeConstructor(opcoes) {
-            {
-                // A marca do professor representa somente um mapa, nunca uma classe Java.
-                yamlConstructors.put(new Tag("!PARAMETERS"), yamlConstructors.get(Tag.MAP));
+        try {
+            LoaderOptions opcoes = new LoaderOptions();
+            opcoes.setAllowDuplicateKeys(false);
+            SafeConstructor construtor = new SafeConstructor(opcoes) {
+                {
+                    yamlConstructors.put(new Tag("!PARAMETERS"), yamlConstructors.get(Tag.MAP));
+                }
+            };
+            Map<?, ?> dados;
+            try (Reader arquivo = Files.newBufferedReader(Path.of(caminho), StandardCharsets.UTF_8)) {
+                dados = (Map<?, ?>) new Yaml(construtor).load(arquivo);
             }
-        };
-        Map<?, ?> dados;
-        try (Reader arquivo = Files.newBufferedReader(Path.of(caminho), StandardCharsets.UTF_8)) {
-            dados = mapa(new Yaml(construtor).load(arquivo), "modelo");
-        }
 
-        Map<?, ?> filasDeclaradas = mapa(dados.get("queues"), "queues");
-        if (filasDeclaradas.isEmpty()) {
-            throw new IllegalArgumentException("queues deve declarar pelo menos uma fila.");
-        }
-        Map<String, Integer> indices = new LinkedHashMap<>();
-        ArrayList<ArrayList<Rota>> rotas = new ArrayList<>();
-        for (Object nome : filasDeclaradas.keySet()) {
-            if (!(nome instanceof String) || ((String) nome).isEmpty()) {
-                throw new IllegalArgumentException("O nome da fila deve ser um texto não vazio.");
+            Map<?, ?> filasDeclaradas = (Map<?, ?>) dados.get("queues");
+            if (filasDeclaradas.isEmpty()) {
+                throw new IllegalArgumentException("queues deve declarar pelo menos uma fila");
             }
-            indices.put((String) nome, indices.size());
-            rotas.add(new ArrayList<>());
-        }
+            Map<String, Integer> indices = new LinkedHashMap<>();
+            ArrayList<ArrayList<Rota>> rotas = new ArrayList<>();
+            for (Object nome : filasDeclaradas.keySet()) {
+                if (!(nome instanceof String) || ((String) nome).isEmpty()) {
+                    throw new IllegalArgumentException("O nome da fila deve ser um texto não vazio");
+                }
+                indices.put((String) nome, indices.size());
+                rotas.add(new ArrayList<>());
+            }
 
-        List<?> ligacoes = dados.containsKey("network") ? lista(dados.get("network"), "network") : List.of();
-        for (Object item : ligacoes) {
-            Map<?, ?> ligacao = mapa(item, "ligação de network");
-            int origem = indice(indices, ligacao.get("source"));
-            int destino = indice(indices, ligacao.get("target"));
-            double probabilidade = numero(ligacao.get("probability"), "probability");
-            rotas.get(origem).add(new Rota(destino, probabilidade));
-        }
+            List<?> ligacoes = dados.containsKey("network") ? (List<?>) dados.get("network") : List.of();
+            for (Object item : ligacoes) {
+                Map<?, ?> ligacao = (Map<?, ?>) item;
+                int origem = indice(indices, ligacao.get("source"));
+                int destino = indice(indices, ligacao.get("target"));
+                double probabilidade = numero(ligacao.get("probability"), "probability");
+                rotas.get(origem).add(new Rota(destino, probabilidade));
+            }
 
-        for (Map.Entry<?, ?> entrada : filasDeclaradas.entrySet()) {
-            String nome = (String) entrada.getKey();
-            Map<?, ?> parametros = mapa(entrada.getValue(), nome);
-            int servidores = inteiro(parametros.get("servers"), "servers");
-            int capacidade = parametros.containsKey("capacity") ? inteiro(parametros.get("capacity"), "capacity") : -1;
-            if (servidores <= 0 || (capacidade != -1 && capacidade < servidores)) {
-                throw new IllegalArgumentException("Servidores/capacidade inválidos na fila " + nome + ".");
-            }
-            Intervalo chegada = null;
-            if (parametros.containsKey("minArrival") || parametros.containsKey("maxArrival")) {
-                chegada = intervalo(parametros, "minArrival", "maxArrival");
-            }
-            Intervalo atendimento = intervalo(parametros, "minService", "maxService");
-            ArrayList<Rota> rotasFila = rotas.get(indices.get(nome));
-            double soma = 0.0;
-            for (Rota rota : rotasFila) {
-                soma += rota.getProbabilidade();
-            }
-            if (soma > 1.0 + 1e-12) {
-                throw new IllegalArgumentException("As probabilidades de saída da fila " + nome + " excedem 1.");
-            }
-            if (soma < 1.0) {
-                rotasFila.add(new Rota(-1, 1.0 - soma));
-            }
-            // Fila já valida cada rota e a soma total das probabilidades.
-            filas.add(new Fila(servidores, capacidade, chegada, atendimento, rotasFila));
-        }
+            for (Map.Entry<?, ?> entrada : filasDeclaradas.entrySet()) {
+                String nome = (String) entrada.getKey();
+                Map<?, ?> parametros = (Map<?, ?>) entrada.getValue();
+                int servidores = inteiro(parametros.get("servers"), "servers");
+                int capacidade = parametros.containsKey("capacity") ? inteiro(parametros.get("capacity"), "capacity") : -1;
+                if (servidores <= 0 || (capacidade != -1 && capacidade < servidores)) {
+                    throw new IllegalArgumentException("Servidores/capacidade inválidos na fila " + nome + ".");
+                }
+                Intervalo chegada = null;
+                if (parametros.containsKey("minArrival") || parametros.containsKey("maxArrival")) {
+                    chegada = intervalo(parametros, "minArrival", "maxArrival");
+                }
+                Intervalo atendimento = intervalo(parametros, "minService", "maxService");
+                ArrayList<Rota> rotasFila = rotas.get(indices.get(nome));
+                double soma = 0.0;
+                for (Rota rota : rotasFila) {
+                    soma += rota.getProbabilidade();
+                }
+                if (soma > 1.0 + 1e-12) {
+                    throw new IllegalArgumentException("As probabilidades de saída da fila " + nome + " excedem 1.");
+                }
+                if (soma < 1.0) {
+                    rotasFila.add(new Rota(-1, 1.0 - soma));
+                }
 
-        Map<?, ?> chegadas = mapa(dados.get("arrivals"), "arrivals");
-        for (Map.Entry<?, ?> entrada : chegadas.entrySet()) {
-            int destino = indice(indices, entrada.getKey());
-            double tempo = numero(entrada.getValue(), "instante em arrivals");
-            if (tempo < 0) {
-                throw new IllegalArgumentException("O instante da primeira chegada não pode ser negativo.");
+                filas.add(new Fila(servidores, capacidade, chegada, atendimento, rotasFila));
             }
-            chegadasIniciais.add(new Evento(tempo, TipoEvento.CHEGADA, -1, destino));
-        }
 
-        if (dados.containsKey("seeds")) {
-            List<?> sementes = lista(dados.get("seeds"), "seeds");
-            if (sementes.size() != 1) {
-                throw new IllegalArgumentException("Esta versão executa uma semente por vez; seeds deve conter exatamente uma semente.");
+            Map<?, ?> chegadas = (Map<?, ?>) dados.get("arrivals");
+            for (Map.Entry<?, ?> entrada : chegadas.entrySet()) {
+                int destino = indice(indices, entrada.getKey());
+                double tempo = numero(entrada.getValue(), "instante em arrivals");
+                if (tempo < 0) {
+                    throw new IllegalArgumentException("O instante da primeira chegada não pode ser negativo");
+                }
+                chegadasIniciais.add(new Evento(tempo, TipoEvento.CHEGADA, -1, destino));
             }
-            long semente = inteiroLongo(sementes.get(0), "seeds");
-            int quantidade = inteiro(dados.get("rndnumbersPerSeed"), "rndnumbersPerSeed");
-            gerador = new GeradorNumerosAleatorios(quantidade, semente);
-        } else {
-            ArrayList<Double> numeros = new ArrayList<>();
-            for (Object valor : lista(dados.get("rndnumbers"), "rndnumbers")) {
-                numeros.add(numero(valor, "rndnumbers"));
+
+            if (dados.containsKey("seeds")) {
+                List<?> sementes = (List<?>) dados.get("seeds");
+                if (sementes.size() != 1) {
+                    throw new IllegalArgumentException("Esta versão executa uma semente por vez; seeds deve conter exatamente uma semente");
+                }
+                long semente = inteiroLongo(sementes.get(0), "seeds");
+                int quantidade = inteiro(dados.get("rndnumbersPerSeed"), "rndnumbersPerSeed");
+                gerador = new GeradorNumerosAleatorios(quantidade, semente);
+            } else {
+                ArrayList<Double> numeros = new ArrayList<>();
+                for (Object valor : (List<?>) dados.get("rndnumbers")) {
+                    numeros.add(numero(valor, "rndnumbers"));
+                }
+                gerador = new GeradorNumerosAleatorios(numeros);
             }
-            gerador = new GeradorNumerosAleatorios(numeros);
+        } catch (RuntimeException erro) {
+            throw new IllegalArgumentException("Modelo inválido: " + erro.getMessage(), erro);
         }
     }
 
@@ -129,20 +132,6 @@ public class LeitorModelo {
         for (Evento chegada : chegadasIniciais) {
             escalonador.agendarPrimeiroEvento(chegada.getTempo(), chegada.getIndiceDestino());
         }
-    }
-
-    private static Map<?, ?> mapa(Object valor, String campo) {
-        if (!(valor instanceof Map)) {
-            throw new IllegalArgumentException(campo + " deve ser um mapa.");
-        }
-        return (Map<?, ?>) valor;
-    }
-
-    private static List<?> lista(Object valor, String campo) {
-        if (!(valor instanceof List)) {
-            throw new IllegalArgumentException(campo + " deve ser uma lista.");
-        }
-        return (List<?>) valor;
     }
 
     private static double numero(Object valor, String campo) {
